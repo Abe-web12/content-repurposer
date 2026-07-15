@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Sparkles, Clock, TrendingUp, Zap, ArrowRight } from "lucide-react";
+import { Sparkles, Clock, TrendingUp, Zap, ArrowRight, BarChart3, Calendar } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,8 @@ import { PLANS } from "@/lib/constants/plans";
 import { useGenerations } from "@/hooks/use-generations";
 import { GenerationCard } from "@/components/history/generation-card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AnalyticsWidget } from "@/components/dashboard/AnalyticsWidget";
+import { ScheduleWidget } from "@/components/dashboard/ScheduleWidget";
 
 export default function DashboardPage() {
   const { plan, generationsUsed, generationsLimit, remaining, percentage, canUserGenerate } =
@@ -107,6 +109,11 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <AnalyticsWidget />
+        <ScheduleWidget />
       </div>
 
       <section>

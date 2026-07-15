@@ -14,10 +14,10 @@ export function Topbar() {
   const title = Object.entries(pageTitles).find(([r]) => pathname === r || pathname.startsWith(`${r}/`))?.[1] || "Dashboard";
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-gray-200 bg-white/80 px-4 backdrop-blur-sm sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[#E2E8F0] bg-white/80 px-4 backdrop-blur-sm sm:px-6 lg:px-8">
       <div className="flex items-center gap-3">
         <MobileNav />
-        <h1 className="text-lg font-semibold text-gray-900">{title}</h1>
+        <h1 className="text-lg font-semibold text-[#0F172A]">{title}</h1>
       </div>
       <UserMenu />
     </header>

@@ -1,23 +1,17 @@
 "use client";
 
 import { useRef } from "react";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useMediaQuery } from "@/hooks/use-media-query";
-
-const HeroScene = dynamic(
-  () => import("./hero-scene").then((mod) => ({ default: mod.HeroScene })),
-  { ssr: false }
-);
+import { TextReveal3D } from "@/components/marketing/text-reveal-3d";
 
 export function Hero() {
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Cursor-reactive tilt for the text block
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
 
@@ -40,18 +34,19 @@ export function Hero() {
     <section
       ref={containerRef}
       onMouseMove={handleMouseMove}
-      className="relative min-h-[92vh] overflow-hidden bg-[#0a0a1a]"
+      className="relative min-h-[92vh] overflow-hidden bg-transparent"
     >
-      {/* 3D Background (desktop only) */}
-      {isDesktop && <HeroScene />}
-
-      {/* Gradient orbs for mobile + depth */}
-      <div className="pointer-events-none absolute inset-0 -z-[5]">
-        <div className="absolute left-1/4 top-1/4 h-[500px] w-[500px] rounded-full bg-purple-600/20 blur-[120px]" />
-        <div className="absolute bottom-1/4 right-1/4 h-[400px] w-[400px] rounded-full bg-indigo-600/15 blur-[100px]" />
+      <div className="pointer-events-none absolute inset-0">
+        <div
+          className="absolute left-1/4 top-1/4 h-[500px] w-[500px] rounded-full blur-[120px]"
+          style={{ background: "rgba(var(--section-bg, 99,102,241), 0.15)" }}
+        />
+        <div
+          className="absolute bottom-1/4 right-1/4 h-[400px] w-[400px] rounded-full blur-[100px]"
+          style={{ background: "rgba(var(--section-bg, 139,92,246), 0.1)" }}
+        />
       </div>
 
-      {/* Content */}
       <div className="relative mx-auto flex min-h-[92vh] max-w-6xl flex-col items-center justify-center px-5 py-24 text-center">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -66,17 +61,16 @@ export function Hero() {
 
         <motion.div
           style={isDesktop ? { rotateX, rotateY, transformPerspective: 1200 } : undefined}
+          className="max-w-5xl"
         >
-          <motion.h1
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-            className="max-w-5xl font-display text-5xl font-extrabold leading-[1.05] tracking-[-0.04em] text-white sm:text-6xl lg:text-8xl"
+          <TextReveal3D
+            as="h1"
+            className="font-display text-5xl font-extrabold leading-[1.05] tracking-[-0.04em] text-white sm:text-6xl lg:text-8xl"
+            delay={0.1}
+            stagger={0.06}
           >
-            One source.
-            <br />
-            <span className="text-indigo-400">Every channel.</span>
-          </motion.h1>
+            One source. Every channel.
+          </TextReveal3D>
         </motion.div>
 
         <motion.p

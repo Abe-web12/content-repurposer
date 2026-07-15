@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { TextReveal3D } from "@/components/marketing/text-reveal-3d";
 
 const steps = [
   { number: "01", title: "Paste your source", description: "YouTube URL, blog link, podcast, or raw text. We extract the substance." },
@@ -18,12 +19,18 @@ export function HowItWorks() {
         transition={{ duration: 0.5 }}
       >
         <p className="text-sm font-semibold uppercase tracking-[0.12em] text-brand-600">How it works</p>
-        <h2 className="mt-3 max-w-xl text-3xl font-bold tracking-tight text-text-primary sm:text-4xl">
+        <TextReveal3D
+          as="h2"
+          className="mt-3 max-w-xl text-3xl font-bold tracking-tight text-text-primary sm:text-4xl"
+          delay={0.1}
+          stagger={0.05}
+          threshold={0.1}
+        >
           Three steps from idea to published content.
-        </h2>
+        </TextReveal3D>
       </motion.div>
 
-      <div className="mt-16 grid gap-12 sm:grid-cols-3">
+      <div className="mt-16 grid gap-6 sm:grid-cols-3">
         {steps.map((step, i) => (
           <motion.div
             key={step.number}
@@ -31,8 +38,14 @@ export function HowItWorks() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-50px" }}
             transition={{ duration: 0.5, delay: i * 0.15 }}
+            className="group rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-7 transition-all duration-500 hover:border-white/20 hover:bg-white/[0.06]"
           >
-            <span className="text-4xl font-bold text-brand-200">{step.number}</span>
+            <span
+              className="text-4xl font-bold transition-colors duration-500"
+              style={{ color: "var(--section-accent, #818cf8)" }}
+            >
+              {step.number}
+            </span>
             <h3 className="mt-4 text-lg font-semibold text-text-primary">{step.title}</h3>
             <p className="mt-2 text-sm leading-relaxed text-text-secondary">{step.description}</p>
           </motion.div>

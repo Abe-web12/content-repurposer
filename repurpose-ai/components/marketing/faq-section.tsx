@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TextReveal3D } from "@/components/marketing/text-reveal-3d";
 
 const faqs = [
   { q: "What content sources can I use?", a: "YouTube videos (via transcript), any public blog/article URL, podcast URLs, or paste raw text directly. We support any content you want to repurpose." },
@@ -26,28 +27,53 @@ export function FaqSection() {
         transition={{ duration: 0.5 }}
         className="text-center"
       >
-        <h2 className="text-3xl font-bold tracking-tight text-text-primary sm:text-4xl">
+        <TextReveal3D
+          as="h2"
+          className="text-3xl font-bold tracking-tight text-text-primary sm:text-4xl"
+          delay={0.1}
+          stagger={0.05}
+          threshold={0.1}
+        >
           Common questions
-        </h2>
+        </TextReveal3D>
       </motion.div>
 
-      <div className="mt-12 space-y-2">
+      <div className="mt-12 space-y-3">
         {faqs.map((faq, i) => (
-          <div key={i} className="rounded-xl border border-surface-3">
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-30px" }}
+            transition={{ duration: 0.3, delay: i * 0.05 }}
+            className="rounded-xl border border-white/10 bg-white/[0.02] backdrop-blur-xl transition-all duration-500 hover:border-white/20"
+          >
             <button
               type="button"
               onClick={() => setOpen(open === i ? null : i)}
-              className="flex w-full items-center justify-between gap-4 px-6 py-4 text-left"
+              className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left"
             >
               <span className="text-sm font-semibold text-text-primary">{faq.q}</span>
-              <ChevronDown className={cn("h-4 w-4 shrink-0 text-text-muted transition-transform", open === i && "rotate-180")} />
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 shrink-0 text-text-muted transition-transform duration-300",
+                  open === i && "rotate-180"
+                )}
+              />
             </button>
-            {open === i && (
-              <div className="px-6 pb-5">
-                <p className="text-sm leading-relaxed text-text-secondary">{faq.a}</p>
+            <div
+              className={cn(
+                "grid transition-all duration-300",
+                open === i ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+              )}
+            >
+              <div className="overflow-hidden">
+                <div className="px-6 pb-5">
+                  <p className="text-sm leading-relaxed text-text-secondary">{faq.a}</p>
+                </div>
               </div>
-            )}
-          </div>
+            </div>
+          </motion.div>
         ))}
       </div>
     </section>

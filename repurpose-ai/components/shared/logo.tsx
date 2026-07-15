@@ -1,11 +1,10 @@
 
 import { cn } from "@/lib/utils";
 
-export function Logo({ compact = false, className }: { compact?: boolean; className?: string }) {
+export function Logo({ compact = false, inverted = false, className }: { compact?: boolean; inverted?: boolean; className?: string }) {
   return (
     <div className={cn("flex items-center gap-2.5", className)}>
-      {/* Logo mark */}
-      <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 shadow-sm">
+      <div className={cn("relative flex h-9 w-9 items-center justify-center rounded-xl shadow-sm", inverted ? "bg-brand-500" : "bg-brand-600")}>
         <svg
           width="20"
           height="20"
@@ -36,7 +35,7 @@ export function Logo({ compact = false, className }: { compact?: boolean; classN
       </div>
 
       {!compact && (
-        <span className="text-lg font-bold tracking-tight text-text-primary">
+        <span className={cn("text-lg font-bold tracking-tight", inverted ? "text-white" : "text-text-primary")}>
           RepurposeAI
         </span>
       )}

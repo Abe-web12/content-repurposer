@@ -62,6 +62,8 @@ const config: Config = {
         "pulse-slow": "pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite",
         "spin-slow": "spin 8s linear infinite",
         shimmer: "shimmer 2s linear infinite",
+        "rotate-3d": "rotate3d 12s linear infinite",
+        "drift-slow": "driftSlow 20s ease-in-out infinite",
       },
       keyframes: {
         fadeIn: {
@@ -87,6 +89,16 @@ const config: Config = {
         shimmer: {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
+        },
+        rotate3d: {
+          "0%": { transform: "rotateY(0deg) rotateX(0deg)" },
+          "50%": { transform: "rotateY(180deg) rotateX(5deg)" },
+          "100%": { transform: "rotateY(360deg) rotateX(0deg)" },
+        },
+        driftSlow: {
+          "0%, 100%": { transform: "translate(0, 0) scale(1)" },
+          "33%": { transform: "translate(30px, -20px) scale(1.05)" },
+          "66%": { transform: "translate(-20px, 15px) scale(0.95)" },
         },
       },
       backgroundImage: {

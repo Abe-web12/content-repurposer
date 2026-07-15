@@ -2,8 +2,6 @@
 
 import { motion } from "framer-motion";
 
-// TODO: Replace hardcoded stats with real data from the database once the app
-// has active users. These are launch-day placeholders.
 const STATS = [
   { value: "200+", label: "active users" },
   { value: "3", label: "output formats" },
@@ -13,13 +11,13 @@ const STATS = [
 
 export function SocialProof() {
   return (
-    <section className="border-y border-surface-3 bg-surface-1">
+    <section className="border-y border-white/10 bg-white/[0.02] backdrop-blur-xl">
       <div className="mx-auto max-w-6xl px-5 py-16">
         <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
+          initial={{ opacity: 0, y: 10 }}
+          whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.5, staggerChildren: 0.1 }}
           className="flex flex-col items-center gap-6 text-center sm:flex-row sm:justify-center sm:gap-16 sm:text-left"
         >
           {STATS.map((stat) => (
@@ -33,9 +31,14 @@ export function SocialProof() {
 
 function Stat({ value, label }: { value: string; label: string }) {
   return (
-    <div>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.4 }}
+    >
       <p className="text-2xl font-bold text-text-primary sm:text-3xl">{value}</p>
       <p className="mt-1 text-sm text-text-muted">{label}</p>
-    </div>
+    </motion.div>
   );
 }

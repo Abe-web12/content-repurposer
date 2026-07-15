@@ -2,11 +2,20 @@
 
 import { useState, useCallback } from "react";
 import type { InputType, OutputFormat } from "@/lib/constants/formats";
-import type { VoiceProfile } from "@/lib/supabase/types";
+import type { VoiceProfile, BrandKit } from "@/lib/supabase/types";
+import type { GeminiExtraction } from "@/lib/ai/gemini-provider";
 import { useUsage } from "@/components/providers/usage-provider";
 import { showError } from "@/components/ui/toast";
 
-export type GenerateStep = "input" | "format" | "generating" | "output";
+export type GenerateStep =
+  | "input"
+  | "fetching_transcript"
+  | "analyzing_with_gemini"
+  | "format"
+  | "generating"
+  | "output";
+
+export type Tone = "thought_leader" | "direct" | "casual";
 
 interface GenerateState {
   step: GenerateStep;
@@ -19,9 +28,14 @@ interface GenerateState {
   generatedContent: string;
   generationId: string | null;
   isExtracting: boolean;
+  isFetchingTranscript: boolean;
   isAnalyzing: boolean;
   isGenerating: boolean;
   error: string | null;
+  tone: Tone;
+  audience: string;
+  brandKit: BrandKit | null;
+  geminiAnalysis: GeminiExtraction | null;
 }
 
 const initialState: GenerateState = {
@@ -35,10 +49,79 @@ const initialState: GenerateState = {
   generatedContent: "",
   generationId: null,
   isExtracting: false,
+  isFetchingTranscript: false,
   isAnalyzing: false,
   isGenerating: false,
   error: null,
+  tone: "thought_leader",
+  audience: "",
+  brandKit: null,
+  geminiAnalysis: null,
 };
+
+function streamToContent(
+  response: Response,
+  onText: (text: string) => void,
+  onError: (error: string) => void,
+  onDone: (generationId: string | null) => void
+): Promise<void> {
+  return new Promise((resolve) => {
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+    if (!reader) {
+      onError("Failed to read response stream");
+      resolve();
+      return;
+    }
+
+    let incomplete = "";
+    let lastChunkTime = Date.now();
+    const STREAM_INACTIVITY_MS = 30000;
+
+    const r = reader!;
+
+    async function read() {
+      while (true) {
+        if (Date.now() - lastChunkTime > STREAM_INACTIVITY_MS) {
+          onError("Generation stalled. Try again.");
+          resolve();
+          return;
+        }
+
+        const { done, value } = await r.read();
+        if (done) break;
+
+        lastChunkTime = Date.now();
+        const text = decoder.decode(value, { stream: true });
+        const lines = (incomplete + text).split("\n");
+        incomplete = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          let parsed;
+          try {
+            parsed = JSON.parse(line.slice(6));
+          } catch {
+            continue;
+          }
+          if (parsed.error) {
+            onError(parsed.error);
+            resolve();
+            return;
+          }
+          if (parsed.text) onText(parsed.text);
+          if (parsed.done) {
+            onDone(parsed.generation_id || null);
+          }
+        }
+      }
+      onDone(null);
+      resolve();
+    }
+
+    read().catch((err) => onError(err.message || "Stream error"));
+  });
+}
 
 export function useGenerate() {
   const [state, setState] = useState<GenerateState>(initialState);
@@ -68,10 +151,104 @@ export function useGenerate() {
     updateState({ voiceProfile });
   }, [updateState]);
 
+  const setTone = useCallback((tone: Tone) => {
+    updateState({ tone });
+  }, [updateState]);
+
+  const setAudience = useCallback((audience: string) => {
+    updateState({ audience });
+  }, [updateState]);
+
+  const setBrandKit = useCallback((brandKit: BrandKit | null) => {
+    updateState({ brandKit });
+  }, [updateState]);
+
+  const clearSource = useCallback(() => {
+    updateState({
+      inputValue: "",
+      extractedContent: "",
+      sourceTitle: "",
+      generatedContent: "",
+      generationId: null,
+      geminiAnalysis: null,
+      error: null,
+      step: "input",
+    });
+  }, [updateState]);
+
   const extract = useCallback(async () => {
     if (!state.inputValue.trim()) {
       updateState({ error: "Please enter content to repurpose." });
       return false;
+    }
+
+    if (state.inputType === "youtube_url") {
+      updateState({
+        isExtracting: true,
+        isFetchingTranscript: true,
+        step: "fetching_transcript",
+        error: null,
+        geminiAnalysis: null,
+      });
+
+      try {
+        const transcribeRes = await fetch("/api/transcribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: state.inputValue.trim() }),
+        });
+
+        const transcribeJson = await transcribeRes.json();
+
+        if (!transcribeRes.ok) {
+          const errMsg =
+            typeof transcribeJson.error === "string"
+              ? transcribeJson.error
+              : "Transcription failed";
+          updateState({ isExtracting: false, isFetchingTranscript: false, error: errMsg, step: "input" });
+          return false;
+        }
+
+        updateState({
+          extractedContent: transcribeJson.transcript,
+          sourceTitle: transcribeJson.title,
+          isFetchingTranscript: false,
+          step: "analyzing_with_gemini",
+        });
+
+        const geminiRes = await fetch("/api/gemini-extract", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ transcript: transcribeJson.transcript }),
+        });
+
+        const geminiJson = await geminiRes.json();
+
+        if (!geminiRes.ok) {
+          const errMsg =
+            typeof geminiJson.error === "string"
+              ? geminiJson.error
+              : "AI analysis failed";
+          updateState({ isExtracting: false, error: errMsg, step: "format" });
+          return false;
+        }
+
+        updateState({
+          isExtracting: false,
+          geminiAnalysis: geminiJson.data,
+          step: "format",
+        });
+
+        return true;
+      } catch (err: any) {
+        updateState({
+          isExtracting: false,
+          isFetchingTranscript: false,
+          error: err.message || "Network error",
+          step: "input",
+        });
+        return false;
+      }
     }
 
     updateState({ isExtracting: true, error: null });
@@ -108,11 +285,85 @@ export function useGenerate() {
     }
   }, [state.inputValue, state.inputType, updateState]);
 
-  const generate = useCallback(async () => {
+  const geminiGenerate = useCallback(async (formatOverride?: OutputFormat) => {
     if (!canUserGenerate) {
       showError("You've reached your generation limit. Upgrade to continue.");
       return false;
     }
+
+    const format = formatOverride || state.outputFormat;
+
+    updateState({ isAnalyzing: false, isGenerating: true, generatedContent: "", error: null, step: "generating" });
+
+    try {
+      const response = await fetch("/api/generate-content", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          extraction: state.geminiAnalysis,
+          brandKit: state.brandKit,
+          voiceProfile: state.voiceProfile,
+          tone: state.tone,
+          audience: state.audience || "",
+          format,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorJson = await response.json().catch(() => ({}));
+        updateState({ isGenerating: false, error: errorJson.error || "Generation failed", step: "format" });
+        return false;
+      }
+
+      let fullContent = "";
+      let receivedGenerationId: string | null = null;
+
+      await streamToContent(
+        response,
+        (text) => {
+          fullContent += text;
+          setState((prev) => ({ ...prev, generatedContent: fullContent }));
+        },
+        (error) => {
+          updateState({ isGenerating: false, error, step: "format" });
+        },
+        (generationId) => {
+          receivedGenerationId = generationId;
+        }
+      );
+
+      if (!fullContent && !state.error) {
+        updateState({ isGenerating: false, error: "No content generated", step: "format" });
+        return false;
+      }
+
+      updateState({
+        isGenerating: false,
+        generatedContent: fullContent,
+        generationId: receivedGenerationId,
+        outputFormat: format,
+        step: "output",
+      });
+
+      incrementUsage();
+      return true;
+    } catch (err: any) {
+      updateState({ isGenerating: false, error: err.message || "Generation failed", step: "format" });
+      return false;
+    }
+  }, [state.geminiAnalysis, state.outputFormat, state.voiceProfile, state.tone, state.audience, state.brandKit, canUserGenerate, updateState, incrementUsage]);
+
+  const generate = useCallback(async (formatOverride?: OutputFormat) => {
+    if (!canUserGenerate) {
+      showError("You've reached your generation limit. Upgrade to continue.");
+      return false;
+    }
+
+    if (state.geminiAnalysis) {
+      return geminiGenerate(formatOverride);
+    }
+
+    const format = formatOverride || state.outputFormat;
 
     updateState({ isAnalyzing: true, isGenerating: false, generatedContent: "", error: null, step: "generating" });
 
@@ -123,6 +374,9 @@ export function useGenerate() {
         body: JSON.stringify({
           content: state.extractedContent,
           source_type: state.inputType.replace("_url", "").replace("raw_", ""),
+          tone: state.tone,
+          audience: state.audience || undefined,
+          brand_voice: state.brandKit?.brand_voice || undefined,
         }),
       });
 
@@ -135,31 +389,15 @@ export function useGenerate() {
 
       updateState({ isAnalyzing: false, isGenerating: true });
 
-      // 90 second timeout for generation (streams can be long)
-      const generateController = new AbortController();
-      const generateTimeout = setTimeout(() => generateController.abort(), 90000);
-
-      let generateResponse: Response;
-      try {
-        generateResponse = await fetch("/api/generate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          signal: generateController.signal,
-          body: JSON.stringify({
-            content: analyzeJson.data.analysis,
-            output_format: state.outputFormat,
-            voice_profile_id: state.voiceProfile?.id || null,
-          }),
-        });
-      } catch (fetchErr: any) {
-        clearTimeout(generateTimeout);
-        if (fetchErr.name === "AbortError") {
-          updateState({ isGenerating: false, error: "Generation timed out. Try a shorter source.", step: "format" });
-          return false;
-        }
-        throw fetchErr;
-      }
-      clearTimeout(generateTimeout);
+      const generateResponse = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: analyzeJson.data.analysis,
+          output_format: format,
+          voice_profile_id: state.voiceProfile?.id || null,
+        }),
+      });
 
       if (!generateResponse.ok) {
         const errorJson = await generateResponse.json();
@@ -167,70 +405,33 @@ export function useGenerate() {
         return false;
       }
 
-      const reader = generateResponse.body?.getReader();
-      const decoder = new TextDecoder();
       let fullContent = "";
-      let generationId: string | null = null;
+      let receivedGenerationId: string | null = null;
 
-      if (!reader) {
-        updateState({ isGenerating: false, error: "Failed to read response stream", step: "format" });
+      await streamToContent(
+        generateResponse,
+        (text) => {
+          fullContent += text;
+          setState((prev) => ({ ...prev, generatedContent: fullContent }));
+        },
+        (error) => {
+          updateState({ isGenerating: false, error, step: "format" });
+        },
+        (generationId) => {
+          receivedGenerationId = generationId;
+        }
+      );
+
+      if (!fullContent && !state.error) {
+        updateState({ isGenerating: false, error: "No content generated", step: "format" });
         return false;
-      }
-
-      // Read with inactivity timeout
-      let lastChunkTime = Date.now();
-      const STREAM_INACTIVITY_MS = 30000;
-
-      // Buffer for SSE events split across TCP chunks
-      let incomplete = "";
-
-      while (true) {
-        if (Date.now() - lastChunkTime > STREAM_INACTIVITY_MS) {
-          updateState({ isGenerating: false, error: "Generation stalled. Try again.", step: "format" });
-          return false;
-        }
-
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        lastChunkTime = Date.now();
-
-        // Use { stream: true } to preserve multi-byte UTF-8 chars split across chunks
-        const text = decoder.decode(value, { stream: true });
-        const lines = (incomplete + text).split("\n");
-        incomplete = lines.pop() || "";
-
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            let parsed;
-            try {
-              parsed = JSON.parse(line.slice(6));
-            } catch {
-              console.warn("[SSE] Malformed chunk skipped:", line.slice(6, 50));
-              continue;
-            }
-
-            if (parsed.error) {
-              updateState({ isGenerating: false, error: parsed.error, step: "format" });
-              return false;
-            }
-
-            if (parsed.text) {
-              fullContent += parsed.text;
-              setState((prev) => ({ ...prev, generatedContent: fullContent }));
-            }
-
-            if (parsed.done) {
-              generationId = parsed.generation_id || null;
-            }
-          }
-        }
       }
 
       updateState({
         isGenerating: false,
         generatedContent: fullContent,
-        generationId,
+        generationId: receivedGenerationId,
+        outputFormat: format,
         step: "output",
       });
 
@@ -240,7 +441,7 @@ export function useGenerate() {
       updateState({ isAnalyzing: false, isGenerating: false, error: err.message || "Generation failed", step: "format" });
       return false;
     }
-  }, [state.extractedContent, state.outputFormat, state.voiceProfile, state.inputType, canUserGenerate, updateState, incrementUsage]);
+  }, [state.geminiAnalysis, state.extractedContent, state.outputFormat, state.voiceProfile, state.inputType, state.tone, state.audience, state.brandKit, canUserGenerate, updateState, incrementUsage, geminiGenerate]);
 
   const regenerate = useCallback(async () => {
     updateState({ generatedContent: "", generationId: null });
@@ -253,8 +454,13 @@ export function useGenerate() {
     setInputValue,
     setOutputFormat,
     setVoiceProfile,
+    setTone,
+    setAudience,
+    setBrandKit,
+    clearSource,
     extract,
     generate,
+    geminiGenerate,
     regenerate,
     reset,
   };

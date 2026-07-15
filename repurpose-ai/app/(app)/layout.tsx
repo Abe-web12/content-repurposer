@@ -13,7 +13,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <AuthProvider>
       <UsageProvider>
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-[#F8FAFC]">
           <div className="fixed inset-y-0 left-0 z-40 hidden w-64 lg:block">
             <Sidebar />
           </div>

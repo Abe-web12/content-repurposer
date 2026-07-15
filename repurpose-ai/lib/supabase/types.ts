@@ -42,6 +42,53 @@ export interface Generation {
   created_at: string;
 }
 
+export interface BrandKit {
+  id: string;
+  user_id: string;
+  company_name: string;
+  brand_colors: string[];
+  brand_voice: string;
+  logo_url: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ScheduledPostStatus = "draft" | "scheduled" | "posted";
+export type ScheduledPlatform = "linkedin" | "twitter" | "blog" | "other";
+
+export interface ScheduledPost {
+  id: string;
+  user_id: string;
+  content: string;
+  platform: ScheduledPlatform;
+  scheduled_at: string;
+  status: ScheduledPostStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export type WebhookTriggerEvent =
+  | "generation.completed"
+  | "schedule.created"
+  | "scheduled.posted"
+  | "content.published";
+
+export interface UserWebhook {
+  id: string;
+  user_id: string;
+  name: string;
+  url: string;
+  secret: string | null;
+  trigger_events: WebhookTriggerEvent[];
+  is_active: boolean;
+  retry_count: number;
+  last_success_at: string | null;
+  last_failure_at: string | null;
+  last_error: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface UsageLog {
   id: string;
   user_id: string;
@@ -64,10 +111,25 @@ export interface Database {
         Insert: Omit<VoiceProfile, "id" | "created_at">;
         Update: Partial<Omit<VoiceProfile, "id" | "user_id" | "created_at">>;
       };
+      brand_kits: {
+        Row: BrandKit;
+        Insert: Omit<BrandKit, "id" | "created_at" | "updated_at">;
+        Update: Partial<Omit<BrandKit, "id" | "user_id" | "created_at">>;
+      };
       generations: {
         Row: Generation;
         Insert: Omit<Generation, "id" | "created_at" | "voice_profile">;
         Update: Partial<Omit<Generation, "id" | "user_id" | "created_at">>;
+      };
+      scheduled_posts: {
+        Row: ScheduledPost;
+        Insert: Omit<ScheduledPost, "id" | "created_at" | "updated_at">;
+        Update: Partial<Omit<ScheduledPost, "id" | "user_id" | "created_at">>;
+      };
+      user_webhooks: {
+        Row: UserWebhook;
+        Insert: Omit<UserWebhook, "id" | "created_at" | "updated_at" | "retry_count" | "last_success_at" | "last_failure_at" | "last_error">;
+        Update: Partial<Omit<UserWebhook, "id" | "user_id" | "created_at">>;
       };
       usage_log: {
         Row: UsageLog;

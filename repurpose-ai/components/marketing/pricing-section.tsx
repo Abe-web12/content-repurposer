@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { PLANS, type PlanKey } from "@/lib/constants/plans";
 import { cn } from "@/lib/utils";
+import { TextReveal3D } from "@/components/marketing/text-reveal-3d";
 
 export function PricingSection() {
   return (
@@ -18,9 +19,15 @@ export function PricingSection() {
         className="text-center"
       >
         <p className="text-sm font-semibold uppercase tracking-[0.12em] text-brand-600">Pricing</p>
-        <h2 className="mt-3 text-3xl font-bold tracking-tight text-text-primary sm:text-4xl">
+        <TextReveal3D
+          as="h2"
+          className="mt-3 text-3xl font-bold tracking-tight text-text-primary sm:text-4xl"
+          delay={0.1}
+          stagger={0.05}
+          threshold={0.1}
+        >
           Start free. Scale when you need to.
-        </h2>
+        </TextReveal3D>
       </motion.div>
 
       <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -35,12 +42,17 @@ export function PricingSection() {
               viewport={{ once: true }}
               transition={{ duration: 0.4, delay: i * 0.1 }}
               className={cn(
-                "relative rounded-2xl border p-8",
-                plan.popular ? "border-brand-500 ring-1 ring-brand-200" : "border-surface-3"
+                "group relative rounded-2xl border bg-white/[0.03] backdrop-blur-xl p-8 transition-all duration-500",
+                plan.popular
+                  ? "border-brand-500/50 ring-1 ring-brand-500/20 hover:border-brand-400 hover:ring-brand-500/30"
+                  : "border-white/10 hover:border-white/20 hover:bg-white/[0.06]"
               )}
             >
               {plan.popular && (
-                <span className="absolute -top-3 left-6 rounded-full bg-brand-600 px-3 py-1 text-xs font-semibold text-white">
+                <span
+                  className="absolute -top-3 left-6 rounded-full px-3 py-1 text-xs font-semibold text-white transition-colors duration-500"
+                  style={{ backgroundColor: "var(--section-accent, #6366f1)" }}
+                >
                   Popular
                 </span>
               )}
@@ -55,7 +67,7 @@ export function PricingSection() {
               <ul className="mt-6 space-y-3">
                 {plan.features.map((f) => (
                   <li key={f} className="flex items-start gap-2.5 text-sm text-text-secondary">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
                     {f}
                   </li>
                 ))}

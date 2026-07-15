@@ -9,6 +9,8 @@ import { Separator } from "@/components/ui/separator";
 import { PlanBadge } from "@/components/billing/plan-badge";
 import { useUser } from "@/hooks/use-user";
 import { showError } from "@/components/ui/toast";
+import { BrandKitForm } from "@/components/settings/brand-kit-form";
+import { WebhookSettings } from "@/components/settings/WebhookSettings";
 
 export default function SettingsPage() {
   const { profile, loading: profileLoading, signOut } = useUser();
@@ -122,6 +124,10 @@ export default function SettingsPage() {
           )}
         </CardContent>
       </Card>
+
+      <BrandKitForm />
+
+      <WebhookSettings />
 
       <Separator />
 
