@@ -1,0 +1,77 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Platform {
+  LINKEDIN
+  TWITTER
+}
+
+enum PostStatus {
+  PENDING
+  PUBLISHED
+  FAILED
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  generations    Generation[]
+  voiceProfiles  VoiceProfile[]
+  scheduledPosts ScheduledPost[]
+
+  @@map("users")
+}
+
+model VoiceProfile {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  description String?
+  userId      String   @map("user_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  generations Generation[]
+
+  @@map("voice_profiles")
+}
+
+model Generation {
+  id             String   @id @default(uuid()) @db.Uuid
+  title          String?
+  sourceUrl      String?  @map("source_url")
+  content        String
+  userId         String   @map("user_id")
+  voiceProfileId String?  @map("voice_profile_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  voiceProfile VoiceProfile? @relation(fields: [voiceProfileId], references: [id], onDelete: SetNull)
+
+  @@map("generations")
+}
+
+model ScheduledPost {
+  id          String     @id @default(uuid()) @db.Uuid
+  platform    Platform
+  content     String
+  scheduledAt DateTime   @map("scheduled_at")
+  status      PostStatus @default(PENDING)
+  userId      String     @map("user_id")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("scheduled_posts")
+}
